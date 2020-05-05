@@ -65,7 +65,7 @@ var initMap = function(json)
             })
             .attr("r", function(d){
                 console.log(d.may022020)
-                return Math.sqrt(parseInt(d.may022020)*0.0004)
+                return Math.sqrt(parseInt(d.may022020)*0.0006)
             })
             .style("fill", "yellow")
             .style("opacity",0.75)
