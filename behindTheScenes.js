@@ -1,5 +1,174 @@
 
 
+var createLabels = function(screen, margins, graph)
+{
+    var labels = d3.select("svg#lineGraph")
+        .append("g")
+        .classed("labels",true);
+        
+    labels.append("text")
+        .text("Covid-19 Cases Over Time")
+        .classed("title",true)
+        .attr("text-anchor","middle")
+        .attr("x",margins.left+(graph.width/2))
+        .attr("y",margins.top);
+    
+    labels.append("text")
+        .text("Days")
+        .classed("label",true)
+        .attr("text-anchor","middle")
+        .attr("x",margins.left+(graph.width/2))
+        .attr("y",screen.height);
+    
+    labels.append("g")
+        .attr("transform","translate(20,"+ 
+              (margins.top+(graph.height/2))+")")
+        .append("text")
+        .text("Case Number")
+        .classed("label",true)
+        .attr("text-anchor","middle")
+        .attr("transform","rotate(90)");
+    
+}
+
+
+var createAxes = function(screen, margins, graph, xScale, yScale)
+{
+    var xAxis = d3.axisBottom(xScale);
+    var yAxis = d3.axisLeft(yScale);
+    
+    var axes = d3.select("svg#lineGraph")
+        .append("g")
+    axes.append("g")
+        .attr("transform","translate("+margins.left+","
+             +(margins.top+graph.height)+")")
+        .call(xAxis)
+    axes.append("g")
+        .attr("transform","translate("+margins.left+","
+             +(margins.top)+")")
+        .call(yAxis)
+    
+}
+
+
+var drawLines = function(countryCases, graph, xScale, yScale)
+{
+    var lineGenerator = d3.line()
+                            .x(function (quiz,i)
+                              {return xScale(i);})
+                            .y(function (quiz)
+                              {return yScale(quiz);})
+                            .curve(d3.curveCardinal);
+    
+    var lines = d3.select("svg#lineGraph")
+        .select(".graph")
+        .selectAll("g")
+        .data(penguins)
+        .enter()
+        .append("g")
+        .classed("line",true)
+        .attr("fill","none")
+        .attr("stroke","blue")
+        .attr("stroke-width", 3);
+        
+    
+    
+    lines.append("path")
+        .datum(function(penguin) 
+            { return penguin.quizes.map(getQuizzes);})
+        .attr("d",lineGenerator);
+    
+//    lines.selectAll("circle")
+//    		.data(function(penguin) 
+//            { return penguin.quizes.map(getQuizzes);})
+//    	.enter()
+//        .append("circle")
+//        .attr("class", "hide")
+//        .attr("fill", "blue")
+//        .attr("r", 3)
+//        .attr("cx", function(quiz, i) { return xScale(i); })
+//        .attr("cy", function(quiz) { return yScale(quiz); });
+    
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+var initGraph = function(cases)
+{
+    //the size of the screen
+    var screen = {width:800, height:550};
+    
+    //how much space will be on each side of the graph
+    var margins = {top:15,bottom:40,left:70,right:40};
+    
+    //generated how much space the graph will take up
+    var graph = 
+    {
+        width:screen.width-margins.left-margins.right,
+        height:screen.height-margins.top-margins.bottom,
+    }
+    
+    
+    //set the screen size
+    d3.select("svg#lineGraph")
+        .attr("width",screen.width)
+        .attr("height",screen.height)
+        .style("background-color", "white")
+    
+    //create a group for the graph
+    var g = d3.select("svg#lineGraph")
+        .append("g")
+        .classed("graph",true)
+        .attr("transform","translate("+margins.left+","+
+             margins.top+")");
+    
+    //get the headers 
+    var headers = Object.getOwnPropertyNames(cases);
+    var dates = headers.slice(1,headers.length+1);
+    
+    var countriesCases = [];
+    
+    for (var i = 0; i < dates.length; i++) {
+        countriesCases[i] = cases[dates[i]]
+    }
+    
+    console.log(countriesCases);
+    
+    
+    //create scales for all of the dimensions
+
+    var xScale = d3.scaleLinear()
+        .domain([0, dates.length])
+        .range([0,graph.width])
+    
+    
+    var yScale = d3.scaleLinear()
+        .domain([d3.min(countriescases),d3.max(countriesCases)])
+        .range([graph.height,margins.top])
+    /*
+    createLabels(screen, margins, graph);
+    createAxes(screen, margins, graph, xScale, yScale);
+    drawLines(penguins,graph,xScale, yScale);
+    
+    */
+    
+}
+
+
+
+
+
+
 var initMap = function(json)
 {
     //the size of the screen
@@ -17,7 +186,7 @@ var initMap = function(json)
     }
     
     //set the screen size
-    var svg = d3.select("svg")
+    var svg = d3.select("svg#map")
                 .attr("width",screen.width)
                 .attr("height",screen.height)
                 .style("background-color", "#1c1c77")
@@ -45,6 +214,9 @@ var initMap = function(json)
 
     var countriesSuccess = function(countries) {
         
+        
+        console.log("Countries Collected: ", countries);
+
         //sets the color scale
         var color = d3.scaleQuantize()
                         .range(["rgb(237,248,233)","rgb(186,228,179)",
@@ -55,6 +227,7 @@ var initMap = function(json)
         
         //Merge the cases data nd the GeoJSON
         //Loop through once for each country case value
+
         for (var i = 0; i < countries.length; i++) {
             
             //Grab the country name
@@ -102,7 +275,18 @@ var initMap = function(json)
                 }
         })
             .on("click",function(d){
-                console.log(d.properties.NAME);
+                var selectedName = d.properties.NAME;
+                
+                var countryObj = {};
+
+                for (var k = 0; k < countries.length; k++) {
+                    if(countries[k].CountryName == selectedName) {
+                        countryObj = countries[k];
+                        break;
+                    }
+                }
+            
+                initGraph(countryObj)
         });
         
         console.log("New Data: ",json)
