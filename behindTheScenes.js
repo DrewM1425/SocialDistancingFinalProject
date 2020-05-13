@@ -18,7 +18,7 @@ var createLabels = function(screen, margins, graph)
         .classed("label",true)
         .attr("text-anchor","middle")
         .attr("x",margins.left+(graph.width/2))
-        .attr("y",screen.height);
+        .attr("y",screen.height-15); //Adjusted to get the label off the bottom edge of the "screen"
     
     labels.append("g")
         .attr("transform","translate(20,"+ 
@@ -38,15 +38,17 @@ var createAxes = function(screen, margins, graph, xScale, yScale)
     var yAxis = d3.axisLeft(yScale);
     
     var axes = d3.select("svg#lineGraph")
-        .append("g")
+        //s.append("g")
     axes.append("g")
         .attr("transform","translate("+margins.left+","
              +(margins.top+graph.height)+")")
         .call(xAxis)
+        .attr("stroke","black");
     axes.append("g")
         .attr("transform","translate("+margins.left+","
              +(margins.top)+")")
         .call(yAxis)
+        .attr("stroke","black");
     
 }
 
@@ -54,40 +56,43 @@ var createAxes = function(screen, margins, graph, xScale, yScale)
 var drawLines = function(countryCases, graph, xScale, yScale)
 {
     var lineGenerator = d3.line()
-                            .x(function (quiz,i)
+                            .x(function (country,i)
                               {return xScale(i);})
-                            .y(function (quiz)
-                              {return yScale(quiz);})
+                            .y(function (country)
+                              {return yScale(country);})
                             .curve(d3.curveCardinal);
     
     var lines = d3.select("svg#lineGraph")
         .select(".graph")
         .selectAll("g")
-        .data(penguins)
+        .data(countryCases)
         .enter()
         .append("g")
         .classed("line",true)
         .attr("fill","none")
         .attr("stroke","blue")
-        .attr("stroke-width", 3);
+        .attr("stroke-width", 1);
         
     
     
     lines.append("path")
-        .datum(function(penguin) 
-            { return penguin.quizes.map(getQuizzes);})
+        .datum(countryCases)
         .attr("d",lineGenerator);
     
-//    lines.selectAll("circle")
-//    		.data(function(penguin) 
-//            { return penguin.quizes.map(getQuizzes);})
-//    	.enter()
-//        .append("circle")
-//        .attr("class", "hide")
-//        .attr("fill", "blue")
-//        .attr("r", 3)
-//        .attr("cx", function(quiz, i) { return xScale(i); })
-//        .attr("cy", function(quiz) { return yScale(quiz); });
+    /*
+    lines.selectAll("circle")
+    		.data(countryCases)
+    	.enter()
+        .append("circle")
+        .attr("class", "hide")
+        .attr("fill", "blue")
+        .attr("r", 3)
+        .attr("cx", function(caseNum, i) { return xScale(i); })
+        .attr("cy", function(caseNum) { return yScale(caseNum); })
+        .append("title")
+        .text(function(caseNum, i){return "Day "+i+": "+caseNum+"cases."});
+    
+    */
     
 }
 
@@ -109,7 +114,7 @@ var initGraph = function(cases)
     var screen = {width:800, height:550};
     
     //how much space will be on each side of the graph
-    var margins = {top:15,bottom:40,left:70,right:40};
+    var margins = {top:40,bottom:50,left:90,right:40};
     
     //generated how much space the graph will take up
     var graph = 
@@ -120,10 +125,14 @@ var initGraph = function(cases)
     
     
     //set the screen size
-    d3.select("svg#lineGraph")
-        .attr("width",screen.width)
-        .attr("height",screen.height)
-        .style("background-color", "white")
+    var svg = d3.select("svg#lineGraph")
+                .attr("width",screen.width)
+                .attr("height",screen.height)
+                .style("background-color", "white")
+    
+    
+    
+    
     
     //create a group for the graph
     var g = d3.select("svg#lineGraph")
@@ -139,7 +148,7 @@ var initGraph = function(cases)
     var countriesCases = [];
     
     for (var i = 0; i < dates.length; i++) {
-        countriesCases[i] = cases[dates[i]]
+        countriesCases[i] = parseInt(cases[dates[i]]);
     }
     
     console.log(countriesCases);
@@ -151,16 +160,34 @@ var initGraph = function(cases)
         .domain([0, dates.length])
         .range([0,graph.width])
     
-    
     var yScale = d3.scaleLinear()
-        .domain([d3.min(countriescases),d3.max(countriesCases)])
-        .range([graph.height,margins.top])
-    /*
+        .domain([d3.min(countriesCases),d3.max(countriesCases)])
+        .range([graph.height,margins.top]) /////////////////////////////////////////////
+    
+    svg.append("linearGradient")
+               .attr("id", "line-gradient")
+               .attr("gradientUnits", "userSpaceOnUse")
+               .attr("x1", xScale(0)).attr("y1", 0)
+               .attr("x2", xScale(100)).attr("y2", 0)
+               .selectAll("stop")
+               .data(
+                      [
+                       {offset: "100%", color: "blue"},
+                       {offset: "100%", color: "red"},
+                       {offset: "100%", color: "green"},
+                      ]
+                    )
+                .enter().append("stop")
+                        .attr("offset", function(d) { return d.offset; })
+                        .attr("stop-color", function(d) { return d.color; });
+    
+    console.log("The graph height is: ",graph.height);
+    console.log("The country's max is : ", d3.max(countriesCases));
+    
     createLabels(screen, margins, graph);
     createAxes(screen, margins, graph, xScale, yScale);
-    drawLines(penguins,graph,xScale, yScale);
+    drawLines(countriesCases,graph,xScale, yScale);
     
-    */
     
 }
 
@@ -275,6 +302,9 @@ var initMap = function(json)
                 }
         })
             .on("click",function(d){
+                //removes current graph !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! prolly will change to make animations smoother later ------------------------------------------------
+                d3.selectAll("svg#lineGraph>g")
+                  .remove();
                 var selectedName = d.properties.NAME;
                 
                 var countryObj = {};

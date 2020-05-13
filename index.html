@@ -18,10 +18,29 @@
             background-size: cover;
          }
          svg {
-             display: block;
-             margin-left: auto;
-             margin-right:auto;
+             margin:25;
+             left-margin:auto;
+             right-margin:auto;
          }
+         svg#map {
+             float:left;
+        
+         }
+         svg#lineGraph{
+             float: left;
+         }
+         .tick>line {
+             stroke: black;
+         }
+         .domain {
+             stroke: black;
+         }
+         
+         svg#lineGraph .graph .line {
+          fill: none;
+          stroke: url(#line-gradient);
+          stroke-width: 1.5;
+      }
     
     </style>   
     
