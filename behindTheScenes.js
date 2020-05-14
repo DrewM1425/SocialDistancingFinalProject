@@ -1,26 +1,66 @@
 
+var createLineLegend = function(screen, margins, graph)
+{
+    var legend = d3.select("svg#lineGraph")
+                    .append("g")
+                    .classed("legned", true)
+                    .attr("transform", "translate("+(margins.left+10)+","+(margins.top+10)+")");
+    
+    var entries = legend.selectAll("g")
+        .data(["No Stay At Home Requirement","Stay At Home Requirement Enacted"])
+        .enter()
+        .append("g")
+        .classed("legendEntry", true)
+        .attr("fill", function(d,i)
+              {
+                if(i==0){
+                    return "orange";
+                }else{
+                    return "purple";
+                }
+                })
+        .attr("transform", function(d,i)
+             {
+                return "translate(0,"+i*20+")";
+                })
+              
+        entries.append("rect")
+                .attr("width",10)
+                .attr("height",10)
+        entries.append("text")
+                .text(function(d){return d})
+                .attr("x",15)
+                .attr("y",10)
+    
 
-var createLabels = function(screen, margins, graph)
+    
+}
+
+
+
+
+var createLabels = function(screen, margins, graph) //Creates the labels for the line graph
 {
     var labels = d3.select("svg#lineGraph")
         .append("g")
         .classed("labels",true);
         
-    labels.append("text")
+    labels.append("text") //Sets the Title
+        .attr("id", "graphTitle")
         .text("Covid-19 Cases Over Time")
         .classed("title",true)
         .attr("text-anchor","middle")
         .attr("x",margins.left+(graph.width/2))
         .attr("y",margins.top);
     
-    labels.append("text")
+    labels.append("text") //Sets the X-Axis Label
         .text("Days")
         .classed("label",true)
         .attr("text-anchor","middle")
         .attr("x",margins.left+(graph.width/2))
         .attr("y",screen.height-15); //Adjusted to get the label off the bottom edge of the "screen"
     
-    labels.append("g")
+    labels.append("g") //Sets the y-axis label
         .attr("transform","translate(20,"+ 
               (margins.top+(graph.height/2))+")")
         .append("text")
@@ -29,21 +69,28 @@ var createLabels = function(screen, margins, graph)
         .attr("text-anchor","middle")
         .attr("transform","rotate(90)");
     
+    var updateTitleCountry = function(selectedCountryName)
+    {
+        d3.select("#graphTitle")
+            .text("Covid-19 Cases Over Time in "+selectedCountryName)
+    }
+    
 }
 
 
-var createAxes = function(screen, margins, graph, xScale, yScale)
+var createAxes = function(screen, margins, graph, xScale, yScale) //Creates the axes for the line graph
 {
     var xAxis = d3.axisBottom(xScale);
     var yAxis = d3.axisLeft(yScale);
     
     var axes = d3.select("svg#lineGraph")
-        //s.append("g")
+
     axes.append("g")
         .attr("transform","translate("+margins.left+","
              +(margins.top+graph.height)+")")
         .call(xAxis)
         .attr("stroke","black");
+    
     axes.append("g")
         .attr("transform","translate("+margins.left+","
              +(margins.top)+")")
@@ -53,7 +100,7 @@ var createAxes = function(screen, margins, graph, xScale, yScale)
 }
 
 
-var drawLines = function(countryCases, graph, xScale, yScale)
+var drawLines = function(countryCases, graph, xScale, yScale) //Draws the line of the line graph based on the case data for a specific country
 {
     var lineGenerator = d3.line()
                             .x(function (country,i)
@@ -108,7 +155,7 @@ var drawLines = function(countryCases, graph, xScale, yScale)
 
 
 
-var initGraph = function(cases)
+var initGraph = function(selectedName, cases) //Creates the layout and basics for the line graph
 {
     //the size of the screen
     var screen = {width:800, height:550};
@@ -141,20 +188,19 @@ var initGraph = function(cases)
         .attr("transform","translate("+margins.left+","+
              margins.top+")");
     
-    //get the headers 
+    //get the headers of the total cases object in order to get the specifc range of dates from the data
     var headers = Object.getOwnPropertyNames(cases);
     var dates = headers.slice(1,headers.length+1);
     
-    var countriesCases = [];
+    var countriesCases = []; //empty array to store the case data for a speciic country
     
-    for (var i = 0; i < dates.length; i++) {
+    for (var i = 0; i < dates.length; i++) { //stores the case data from an object into an array
         countriesCases[i] = parseInt(cases[dates[i]]);
     }
     
-    console.log(countriesCases);
     
     
-    //create scales for all of the dimensions
+    //create scales
 
     var xScale = d3.scaleLinear()
         .domain([0, dates.length])
@@ -162,36 +208,125 @@ var initGraph = function(cases)
     
     var yScale = d3.scaleLinear()
         .domain([d3.min(countriesCases),d3.max(countriesCases)])
-        .range([graph.height,margins.top]) /////////////////////////////////////////////
+        .range([graph.height,margins.top]) 
     
-    svg.append("linearGradient")
+    
+    var stayHomePromise = d3.csv("StayAtHomeRequirements.csv"); //----------- Need stay-at-home data ------------------------
+        
+    
+    var staySuccess = function(stayData) {
+        
+        //Get the stay at home data for the selected country
+        var stayHeaders = Object.getOwnPropertyNames(stayData[0]);
+        var stayDates = headers.slice(1,stayHeaders.length+1);
+        var selectedStayData = {};
+        
+        for (var k = 0; k < stayData.length; k++) {
+            if(stayData[k].CountryName == selectedName){
+                selectedStayData = stayData[k];
+            }
+        }
+        
+        countryStayData = [] //Store a selected country's data in an array
+    
+        for (var i = 0; i < stayDates.length; i++) {
+            countryStayData[i] = parseInt(selectedStayData[stayDates[i]]);
+            
+        }
+        
+        var socialDistDate = 0; //Base variable to mark when a country put a stay at home order in place
+    
+        for (var j = 0; j < countryStayData.length; j++) {   
+            if(countryStayData[j]>0){
+                socialDistDate = j;
+                console.log("Social Distancing began on day: "+j+" that is "+stayDates[j]);
+                break
+            }
+
+        }
+        
+        d3.select("svg#lineGraph linearGradient").remove() //Remove any previous lineGradient info created
+        
+        //Create a line gradient based on when a country started a stay at home order
+        svg.append("linearGradient")
                .attr("id", "line-gradient")
                .attr("gradientUnits", "userSpaceOnUse")
                .attr("x1", xScale(0)).attr("y1", 0)
-               .attr("x2", xScale(100)).attr("y2", 0)
+               .attr("x2", xScale(socialDistDate)).attr("y2", 0)
                .selectAll("stop")
                .data(
                       [
-                       {offset: "100%", color: "blue"},
-                       {offset: "100%", color: "red"},
-                       {offset: "100%", color: "green"},
+                       {offset: "100%", color: "orange"},
+                       {offset: "100%", color: "purple"},
                       ]
                     )
                 .enter().append("stop")
                         .attr("offset", function(d) { return d.offset; })
                         .attr("stop-color", function(d) { return d.color; });
+
+        
+        
+        
+        
+        
+        
+        createLabels(screen, margins, graph);
+        createAxes(screen, margins, graph, xScale, yScale);
+        createLineLegend(screen, margins, graph);
+        drawLines(countriesCases,graph,xScale, yScale);
     
-    console.log("The graph height is: ",graph.height);
-    console.log("The country's max is : ", d3.max(countriesCases));
+    };
     
-    createLabels(screen, margins, graph);
-    createAxes(screen, margins, graph, xScale, yScale);
-    drawLines(countriesCases,graph,xScale, yScale);
+    
+    
+    var stayFailure = function(err) {console.log("There was an error:",err)};
+    
+    stayHomePromise.then(staySuccess,stayFailure);
     
     
 }
 
-
+var createMapLegend = function(screen, margins, color)  //Source:https://stackoverflow.com/questions/21838013/d3-choropleth-map-with-legend
+{
+    var legend = d3.select("svg#map")
+            .selectAll("g.legendEntry")
+            .data(color.range())
+            .enter()
+            .append("g")
+            .classed("legendEntry",true)
+    
+    legend.append("rect")
+        .attr("x", function(d,i){
+            return 50+i*190
+        })
+        .attr("y", screen.height-50)
+        .attr("width",10)
+        .attr("height", 10)
+        .style("fill", function(d){return d;});
+    
+    legend.append('text')
+        .attr("x", function(d,i){
+            return 55+i*190
+        })
+        .attr("y", screen.height-25)
+        .text(function(d,i){
+        
+            var extent = color.invertExtent(d);
+            
+            if(i==color.range().length-1){
+                return "More than "+extent[0]
+            }
+            else{
+                return extent[0]+" - "+extent[1];
+            }
+            
+    })
+        .attr("text-anchor","middle")
+        .style("fill", function(d){return d;});
+    
+    
+    
+}
 
 
 
@@ -249,11 +384,34 @@ var initMap = function(json)
                         .range(["rgb(237,248,233)","rgb(186,228,179)",
                                 "rgb(116,196,118)","rgb(49,163,84)", "rgb(0,109,44)"]);
         
-        color.domain([d3.min(countries, function(d){return d.may022020}),
-                      d3.max(countries, function(d){return d.may022020})]);
+        
         
         //Merge the cases data nd the GeoJSON
         //Loop through once for each country case value
+        
+        var dataHeaders = Object.getOwnPropertyNames(countries[0]);
+        var dateRange = dataHeaders.slice(1,dataHeaders.length);
+
+        var lastDate = dateRange[dateRange.length-1];
+        
+        //In order to get data that shows interesting distinictions in colors
+        var midCountries = [];
+
+        
+        for( var c = 0; c < countries.length; c++) {
+            if (parseInt(countries[c][lastDate]) < 10000){
+                midCountries.push(parseInt(countries[c][lastDate]));
+            }  
+            
+        }
+        
+        console.log(countries);
+//        color.domain([d3.min(countries, function(d){return parseInt(d[lastDate])}),
+//                      d3.max(countries, function(d){return parseInt(d[lastDate])})]);
+        color.domain([d3.min(midCountries),d3.max(midCountries)]);
+        
+        d3.select("body h1")
+            .text(function(lastDate){return ""})
 
         for (var i = 0; i < countries.length; i++) {
             
@@ -261,7 +419,7 @@ var initMap = function(json)
             var countryName = countries[i].CountryName;
             
             //Grab the country case value
-            var countryCaseNum = parseInt(countries[i].may022020);
+            var countryCaseNum = parseInt(countries[i][lastDate]);
             
             //Find the corresponding country inside the GeoJSON
             for (var j = 0; j < json.features.length; j++) {
@@ -280,7 +438,7 @@ var initMap = function(json)
             }       
         }
         
-        
+        createMapLegend(screen, margins, color);
         
         //Draws the borders and general map
         svg.selectAll("path")
@@ -296,10 +454,10 @@ var initMap = function(json)
                 if (value) {
                     return color(value);
                 } else {
-                    //Make undefined gray
-                    //console.log(d.properties.NAME)
+                    d.properties.value = "No reported"
                     return "#ccc";
                 }
+        
         })
             .on("click",function(d){
                 //removes current graph !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! prolly will change to make animations smoother later ------------------------------------------------
@@ -316,44 +474,13 @@ var initMap = function(json)
                     }
                 }
             
-                initGraph(countryObj)
-        });
+                initGraph(selectedName, countryObj)
+        })
+            .append("title")
+            .text(function(d){return d.properties.NAME+": "+d.properties.value+" cases"});
         
         console.log("New Data: ",json)
         
-        
-        
-        
-        
-        /*
-        
-        var svg = d3.select("svg");
-        
-        var projection = d3.geoEquirectangular()
-                            .translate([screen.width/2,screen.height/2])
-                            .scale([150]) //Default Equirectangular Scale is 152.63
-        
-        svg.selectAll("circle")
-            .data(countries)
-            .enter()
-            .append("circle")
-            .attr("cx", function(d) {
-                return projection([d.lon, d.lat])[0];
-            })
-            .attr("cy", function(d) {
-                return projection([d.lon, d.lat])[1];
-            })
-            .attr("r", function(d){
-                console.log(d.may022020)
-                return Math.sqrt(parseInt(d.may022020)*0.0006)
-            })
-            .style("fill", "yellow")
-            .style("opacity",0.75)
-            .append("title")
-            .text(function(d) {
-                return d.capital+", "+d.CountryName+"\n"+d.may022020+" cases";
-            });
-    */
     
     };
     
