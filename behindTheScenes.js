@@ -3,7 +3,7 @@ var createLineLegend = function(screen, margins, graph)
 {
     var legend = d3.select("svg#lineGraph")
                     .append("g")
-                    .classed("legned", true)
+                    .classed("legend", true)
                     .attr("transform", "translate("+(margins.left+10)+","+(margins.top+10)+")");
     
     var entries = legend.selectAll("g")
@@ -21,7 +21,7 @@ var createLineLegend = function(screen, margins, graph)
                 })
         .attr("transform", function(d,i)
              {
-                return "translate(0,"+i*20+")";
+                return "translate("+i*300+", 0)";
                 })
               
         entries.append("rect")
@@ -47,7 +47,7 @@ var createLabels = function(screen, margins, graph) //Creates the labels for the
         
     labels.append("text") //Sets the Title
         .attr("id", "graphTitle")
-        .text("Covid-19 Cases Over Time")
+        .text("")
         .classed("title",true)
         .attr("text-anchor","middle")
         .attr("x",margins.left+(graph.width/2))
@@ -68,36 +68,114 @@ var createLabels = function(screen, margins, graph) //Creates the labels for the
         .classed("label",true)
         .attr("text-anchor","middle")
         .attr("transform","rotate(90)");
+}
     
-    var updateTitleCountry = function(selectedCountryName)
+var updateTitleCountry = function(selectedCountryName)
     {
         d3.select("#graphTitle")
             .text("Covid-19 Cases Over Time in "+selectedCountryName)
     }
     
+
+var recalculateYScale = function(countryCases,graph,margins)
+{
+    var yScale = d3.scaleLinear()
+        .domain([d3.min(countryCases),d3.max(countryCases)])
+        .range([graph.height,margins.top]) 
+    
+    return yScale;
 }
 
 
-var createAxes = function(screen, margins, graph, xScale, yScale) //Creates the axes for the line graph
+var initAxes = function(screen, margins, graph) //Creates the axes for the line graph
 {
-    var xAxis = d3.axisBottom(xScale);
-    var yAxis = d3.axisLeft(yScale);
+    
     
     var axes = d3.select("svg#lineGraph")
 
     axes.append("g")
+        .attr("id", "xAxis")
         .attr("transform","translate("+margins.left+","
              +(margins.top+graph.height)+")")
-        .call(xAxis)
         .attr("stroke","black");
     
     axes.append("g")
+        .attr("id","yAxis")
         .attr("transform","translate("+margins.left+","
              +(margins.top)+")")
-        .call(yAxis)
         .attr("stroke","black");
     
 }
+
+var updateAxes = function(xScale,yScale)
+{
+    var xAxis = d3.axisBottom(xScale);
+    var yAxis = d3.axisLeft(yScale); 
+    
+    d3.select("#xAxis")
+        .transition()
+        .duration(1000)
+        .call(xAxis)
+    
+    d3.select("#yAxis")
+        .transition()
+        .duration(1000)
+        .call(yAxis)
+}
+
+var updateGraph = function(countryCases, graph, margins, xScale, selectedName)
+{
+    
+    
+    
+    
+    
+    
+    
+    updateTitleCountry(selectedName);
+    
+    var yScale = recalculateYScale(countryCases,graph, margins);
+   
+    updateAxes(xScale, yScale);
+    
+    var lineGenerator = d3.line()
+                            .x(function (country,i)
+                              {return xScale(i);})
+                            .y(function (country)
+                              {return yScale(country);})
+                            .curve(d3.curveCardinal);
+    
+    var lines = d3.select("svg#lineGraph")
+        .select(".graph")
+    
+    lines.selectAll("path") //remove old lines
+         .remove()
+        //.selectAll("path")
+    lines.append("path")
+        .datum(countryCases)
+
+    lines.exit()
+        .remove();
+    
+    //UPDATE - Redecorate
+    
+    d3.select("svg#lineGraph")
+        .select(".graph")
+        .selectAll("path")
+        .classed("line",true)
+        .transition()
+        .duration(1000)
+        .attr("d",lineGenerator)
+        .attr("fill","none")
+        .attr("stroke-width",10)
+
+        
+        
+    
+    
+}
+
+
 
 
 var drawLines = function(countryCases, graph, xScale, yScale) //Draws the line of the line graph based on the case data for a specific country
@@ -111,45 +189,28 @@ var drawLines = function(countryCases, graph, xScale, yScale) //Draws the line o
     
     var lines = d3.select("svg#lineGraph")
         .select(".graph")
-        .selectAll("g")
-        .data(countryCases)
-        .enter()
-        .append("g")
-        .classed("line",true)
-        .attr("fill","none")
-        .attr("stroke","blue")
-        .attr("stroke-width", 1);
+//        .selectAll("g")
+//        .data(countryCases)
+//        .enter()
+//        .append("g")
+//        .classed("line",true)
+//        .attr("fill","none")
+//        .attr("stroke","blue")
+//        .attr("stroke-width", 1);
         
     
     
     lines.append("path")
         .datum(countryCases)
-        .attr("d",lineGenerator);
+        .classed("line",true)
+        .attr("d",lineGenerator)  
+        .attr("fill","none")
+        .attr("stroke","blue")
+        .attr("stroke-width", 1);
+        
     
-    /*
-    lines.selectAll("circle")
-    		.data(countryCases)
-    	.enter()
-        .append("circle")
-        .attr("class", "hide")
-        .attr("fill", "blue")
-        .attr("r", 3)
-        .attr("cx", function(caseNum, i) { return xScale(i); })
-        .attr("cy", function(caseNum) { return yScale(caseNum); })
-        .append("title")
-        .text(function(caseNum, i){return "Day "+i+": "+caseNum+"cases."});
-    
-    */
-    
+
 }
-
-
-
-
-
-
-
-
 
 
 
@@ -188,7 +249,16 @@ var initGraph = function(selectedName, cases) //Creates the layout and basics fo
         .attr("transform","translate("+margins.left+","+
              margins.top+")");
     
+    
+    createLabels(screen, margins, graph);
+    initAxes(screen, margins, graph);
+    createLineLegend(screen, margins, graph);
+    
+    
+    
     //get the headers of the total cases object in order to get the specifc range of dates from the data
+    
+    //-------------------------------------------------------------------------------
     var headers = Object.getOwnPropertyNames(cases);
     var dates = headers.slice(1,headers.length+1);
     
@@ -205,10 +275,6 @@ var initGraph = function(selectedName, cases) //Creates the layout and basics fo
     var xScale = d3.scaleLinear()
         .domain([0, dates.length])
         .range([0,graph.width])
-    
-    var yScale = d3.scaleLinear()
-        .domain([d3.min(countriesCases),d3.max(countriesCases)])
-        .range([graph.height,margins.top]) 
     
     
     var stayHomePromise = d3.csv("StayAtHomeRequirements.csv"); //----------- Need stay-at-home data ------------------------
@@ -270,10 +336,9 @@ var initGraph = function(selectedName, cases) //Creates the layout and basics fo
         
         
         
-        createLabels(screen, margins, graph);
-        createAxes(screen, margins, graph, xScale, yScale);
-        createLineLegend(screen, margins, graph);
-        drawLines(countriesCases,graph,xScale, yScale);
+        
+        updateGraph(countriesCases,graph, margins, xScale,selectedName);
+        //drawLines(countriesCases, graph, xScale, yScale)
     
     };
     
@@ -461,8 +526,8 @@ var initMap = function(json)
         })
             .on("click",function(d){
                 //removes current graph !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! prolly will change to make animations smoother later ------------------------------------------------
-                d3.selectAll("svg#lineGraph>g")
-                  .remove();
+//                d3.selectAll("svg#lineGraph>g")
+//                  .remove();
                 var selectedName = d.properties.NAME;
                 
                 var countryObj = {};
@@ -510,6 +575,7 @@ var successFcn = function(mapData) //If the data is successfully collected
     console.log("Data Collected: ");
 
     initMap(mapData);
+    initGraph()
 }
 
 var failureFcn = function(errorMsg) //If there was an error
