@@ -123,7 +123,7 @@ var updateAxes = function(xScale,yScale)
         .call(yAxis)
 }
 
-var updateGraph = function(selectedName, cases, graph, margins)//(countryCases, graph, margins, xScale, selectedName)
+var updateGraph = function(selectedName, cases, graph, margins)
 {
     var headers = Object.getOwnPropertyNames(cases);
     var dates = headers.slice(1,headers.length+1);
@@ -215,7 +215,7 @@ var updateGraph = function(selectedName, cases, graph, margins)//(countryCases, 
     
     lines.selectAll("path") //remove old lines
          .remove()
-        //.selectAll("path")
+    
     lines.append("path")
         .datum(countriesCases)
 
@@ -259,14 +259,7 @@ var drawLines = function(countryCases, graph, xScale, yScale) //Draws the line o
     
     var lines = d3.select("svg#lineGraph")
         .select(".graph")
-//        .selectAll("g")
-//        .data(countryCases)
-//        .enter()
-//        .append("g")
-//        .classed("line",true)
-//        .attr("fill","none")
-//        .attr("stroke","blue")
-//        .attr("stroke-width", 1);
+
         
     
     
@@ -286,7 +279,7 @@ var drawLines = function(countryCases, graph, xScale, yScale) //Draws the line o
 
 
 
-var initGraph = function(selectedName,cases)//(selectedName, cases) //Creates the layout and basics for the line graph
+var initGraph = function(selectedName,cases)//Creates the layout and basics for the line graph
 {
     //the size of the screen
     var screen = {width:800, height:550};
@@ -328,98 +321,7 @@ var initGraph = function(selectedName,cases)//(selectedName, cases) //Creates th
     
 };
     
-    //get the headers of the total cases object in order to get the specifc range of dates from the data
     
-    //-------------------------------------------------------------------------------
-    /*
-    var headers = Object.getOwnPropertyNames(cases);
-    var dates = headers.slice(1,headers.length+1);
-    
-    var countriesCases = []; //empty array to store the case data for a speciic country
-    
-    for (var i = 0; i < dates.length; i++) { //stores the case data from an object into an array
-        countriesCases[i] = parseInt(cases[dates[i]]);
-    }
-    
-    
-    
-    //create scales
-
-    var xScale = d3.scaleLinear()
-        .domain([0, dates.length])
-        .range([0,graph.width])
-    
-    
-    var stayHomePromise = d3.csv("StayAtHomeRequirements.csv"); //----------- Need stay-at-home data ------------------------
-        
-    
-    var staySuccess = function(stayData) {
-        
-        //Get the stay at home data for the selected country
-        var stayHeaders = Object.getOwnPropertyNames(stayData[0]);
-        var stayDates = headers.slice(1,stayHeaders.length+1);
-        var selectedStayData = {};
-        
-        for (var k = 0; k < stayData.length; k++) {
-            if(stayData[k].CountryName == selectedName){
-                selectedStayData = stayData[k];
-            }
-        }
-        
-        countryStayData = [] //Store a selected country's data in an array
-    
-        for (var i = 0; i < stayDates.length; i++) {
-            countryStayData[i] = parseInt(selectedStayData[stayDates[i]]);
-            
-        }
-        
-        var socialDistDate = 0; //Base variable to mark when a country put a stay at home order in place
-    
-        for (var j = 0; j < countryStayData.length; j++) {   
-            if(countryStayData[j]>0){
-                socialDistDate = j;
-                console.log("Social Distancing began on day: "+j+" that is "+stayDates[j]);
-                break
-            }
-
-        }
-        
-        d3.select("svg#lineGraph linearGradient").remove() //Remove any previous lineGradient info created
-        
-        //Create a line gradient based on when a country started a stay at home order
-        svg.append("linearGradient")
-               .attr("id", "line-gradient")
-               .attr("gradientUnits", "userSpaceOnUse")
-               .attr("x1", xScale(0)).attr("y1", 0)
-               .attr("x2", xScale(socialDistDate)).attr("y2", 0)
-               .selectAll("stop")
-               .data(
-                      [
-                       {offset: "100%", color: "orange"},
-                       {offset: "100%", color: "purple"},
-                      ]
-                    )
-                .enter().append("stop")
-                        .attr("offset", function(d) { return d.offset; })
-                        .attr("stop-color", function(d) { return d.color; });
-
-        
-        
-        
-        
-        
-        
-        
-        updateGraph(countriesCases,graph, margins, xScale,selectedName);
-        //drawLines(countriesCases, graph, xScale, yScale)
-    */
-    //};
-    
-    
-    
-//    var stayFailure = function(err) {console.log("There was an error:",err)};
-//    
-//    stayHomePromise.then(staySuccess,stayFailure);
     
     
 
@@ -501,9 +403,7 @@ var initMap = function(json)
 
     var path = d3.geoPath(projection);
 
-   // countryNames = json.features.map(function(point){return point.properties.NAME})
-    //countryNames.sort();
-    //console.log(countryNames)
+
     
     
     //Load in cases data
@@ -542,9 +442,7 @@ var initMap = function(json)
             
         }
         
-        console.log(countries);
-//        color.domain([d3.min(countries, function(d){return parseInt(d[lastDate])}),
-//                      d3.max(countries, function(d){return parseInt(d[lastDate])})]);
+
         color.domain([d3.min(midCountries),d3.max(midCountries)]);
         
 
@@ -565,7 +463,7 @@ var initMap = function(json)
                     //Copy the caseNumber value into the JSON
                     json.features[j].properties.value = countryCaseNum;
                     
-                    //console.log(countryName+" has "+countryCaseNum+" cases")
+                   
                     
                     //Stop looking through the JSON
                     break;
@@ -595,9 +493,7 @@ var initMap = function(json)
         
         })
             .on("click",function(d){
-                //removes current graph !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! prolly will change to make animations smoother later ------------------------------------------------
-//                d3.selectAll("svg#lineGraph>g")
-//                  .remove();
+                
                 var selectedName = d.properties.NAME;
                 
                 var countryObj = {};
@@ -610,7 +506,7 @@ var initMap = function(json)
                 }
             
                 initGraph(selectedName, countryObj)
-//                updateGraph(selectedName, countryObj);
+
         })
             .append("title")
             .text(function(d){return d.properties.NAME+": "+d.properties.value+" cases"});
