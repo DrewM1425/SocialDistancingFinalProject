@@ -123,18 +123,83 @@ var updateAxes = function(xScale,yScale)
         .call(yAxis)
 }
 
-var updateGraph = function(countryCases, graph, margins, xScale, selectedName)
+var updateGraph = function(selectedName, cases, graph, margins)//(countryCases, graph, margins, xScale, selectedName)
 {
+    var headers = Object.getOwnPropertyNames(cases);
+    var dates = headers.slice(1,headers.length+1);
+    
+    var countriesCases = []; //empty array to store the case data for a speciic country
+    
+    for (var i = 0; i < dates.length; i++) { //stores the case data from an object into an array
+        countriesCases[i] = parseInt(cases[dates[i]]);
+    }
     
     
     
+    //create scales
+
+    var xScale = d3.scaleLinear()
+        .domain([0, dates.length])
+        .range([0,graph.width])
     
     
+    var stayHomePromise = d3.csv("StayAtHomeRequirements.csv"); //----------- Need stay-at-home data ------------------------
+        
     
+    var staySuccess = function(stayData) {
+        
+        //Get the stay at home data for the selected country
+        var stayHeaders = Object.getOwnPropertyNames(stayData[0]);
+        var stayDates = headers.slice(1,stayHeaders.length+1);
+        var selectedStayData = {};
+        
+        for (var k = 0; k < stayData.length; k++) {
+            if(stayData[k].CountryName == selectedName){
+                selectedStayData = stayData[k];
+            }
+        }
+        
+        countryStayData = [] //Store a selected country's data in an array
     
+        for (var i = 0; i < stayDates.length; i++) {
+            countryStayData[i] = parseInt(selectedStayData[stayDates[i]]);
+            
+        }
+        
+        var socialDistDate = 0; //Base variable to mark when a country put a stay at home order in place
+    
+        for (var j = 0; j < countryStayData.length; j++) {   
+            if(countryStayData[j]>0){
+                socialDistDate = j;
+                console.log("Social Distancing began on day: "+j+" that is "+stayDates[j]);
+                break
+            }
+
+        }
+        
+        d3.select("svg#lineGraph linearGradient").remove() //Remove any previous lineGradient info created
+        
+        //Create a line gradient based on when a country started a stay at home order
+        d3.select("svg#lineGraph")
+            .append("linearGradient")
+               .attr("id", "line-gradient")
+               .attr("gradientUnits", "userSpaceOnUse")
+               .attr("x1", xScale(0)).attr("y1", 0)
+               .attr("x2", xScale(socialDistDate)).attr("y2", 0)
+               .selectAll("stop")
+               .data(
+                      [
+                       {offset: "100%", color: "orange"},
+                       {offset: "100%", color: "purple"},
+                      ]
+                    )
+                .enter().append("stop")
+                        .attr("offset", function(d) { return d.offset; })
+                        .attr("stop-color", function(d) { return d.color; });
+
     updateTitleCountry(selectedName);
     
-    var yScale = recalculateYScale(countryCases,graph, margins);
+    var yScale = recalculateYScale(countriesCases,graph, margins);
    
     updateAxes(xScale, yScale);
     
@@ -152,7 +217,7 @@ var updateGraph = function(countryCases, graph, margins, xScale, selectedName)
          .remove()
         //.selectAll("path")
     lines.append("path")
-        .datum(countryCases)
+        .datum(countriesCases)
 
     lines.exit()
         .remove();
@@ -174,6 +239,11 @@ var updateGraph = function(countryCases, graph, margins, xScale, selectedName)
     
     
 }
+    
+    var stayFailure = function(err) {console.log("There was an error:",err)};
+    
+    stayHomePromise.then(staySuccess,stayFailure);
+    }
 
 
 
@@ -216,7 +286,7 @@ var drawLines = function(countryCases, graph, xScale, yScale) //Draws the line o
 
 
 
-var initGraph = function(selectedName, cases) //Creates the layout and basics for the line graph
+var initGraph = function(selectedName,cases)//(selectedName, cases) //Creates the layout and basics for the line graph
 {
     //the size of the screen
     var screen = {width:800, height:550};
@@ -250,15 +320,18 @@ var initGraph = function(selectedName, cases) //Creates the layout and basics fo
              margins.top+")");
     
     
+    
     createLabels(screen, margins, graph);
     initAxes(screen, margins, graph);
     createLineLegend(screen, margins, graph);
+    updateGraph(selectedName, cases, graph, margins)
     
-    
+};
     
     //get the headers of the total cases object in order to get the specifc range of dates from the data
     
     //-------------------------------------------------------------------------------
+    /*
     var headers = Object.getOwnPropertyNames(cases);
     var dates = headers.slice(1,headers.length+1);
     
@@ -339,17 +412,16 @@ var initGraph = function(selectedName, cases) //Creates the layout and basics fo
         
         updateGraph(countriesCases,graph, margins, xScale,selectedName);
         //drawLines(countriesCases, graph, xScale, yScale)
-    
-    };
-    
-    
-    
-    var stayFailure = function(err) {console.log("There was an error:",err)};
-    
-    stayHomePromise.then(staySuccess,stayFailure);
+    */
+    //};
     
     
-}
+    
+//    var stayFailure = function(err) {console.log("There was an error:",err)};
+//    
+//    stayHomePromise.then(staySuccess,stayFailure);
+    
+    
 
 var createMapLegend = function(screen, margins, color)  //Source:https://stackoverflow.com/questions/21838013/d3-choropleth-map-with-legend
 {
@@ -475,8 +547,6 @@ var initMap = function(json)
 //                      d3.max(countries, function(d){return parseInt(d[lastDate])})]);
         color.domain([d3.min(midCountries),d3.max(midCountries)]);
         
-        d3.select("body h1")
-            .text(function(lastDate){return ""})
 
         for (var i = 0; i < countries.length; i++) {
             
@@ -540,6 +610,7 @@ var initMap = function(json)
                 }
             
                 initGraph(selectedName, countryObj)
+//                updateGraph(selectedName, countryObj);
         })
             .append("title")
             .text(function(d){return d.properties.NAME+": "+d.properties.value+" cases"});
@@ -573,9 +644,9 @@ var geoPromise = d3.json("ne_10m_admin_0_countries.json");
 var successFcn = function(mapData) //If the data is successfully collected
 {
     console.log("Data Collected: ");
-
+    //initGraph();
     initMap(mapData);
-    initGraph()
+    
 }
 
 var failureFcn = function(errorMsg) //If there was an error
